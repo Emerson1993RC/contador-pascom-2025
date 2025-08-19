@@ -3,8 +3,8 @@
   "total_inscricoes": 31,
   "fonte": "Aba Lista (Fórmulas SOMA)",
   "paroquias": {
-    "Paróquia A": X,
-    "Paróquia B": Y,
-    "...": "..."
+    "Paróquia A": 10,
+    "Paróquia B": 15,
+    "Paróquia C": 6
   }
 }
