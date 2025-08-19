@@ -1,41 +1,167 @@
 <script>
-    // ... seu código de estilo e funções ...
+    let paroquiasData = {};
+    let updateInterval;
 
+    // Função para buscar dados do arquivo CSV
     async function carregarDados() {
         try {
             const timestamp = new Date().getTime();
-            // CORRIGIDO: Agora ele busca o arquivo dados.csv
+            // ➡️ CORREÇÃO 1: Agora busca o arquivo dados.csv
             const response = await fetch(`./dados.csv?t=${timestamp}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
             
+            // ➡️ CORREÇÃO 2: Lê o conteúdo como texto CSV
             const csvData = await response.text();
             
-            // CORRIGIDO: Lógica para converter CSV em JSON/Objeto
+            // ➡️ CORREÇÃO 3: Lógica para converter o CSV em um objeto JavaScript
             const lines = csvData.split('\n').filter(line => line.trim() !== '');
-            const headers = lines[0].split(',');
+            const headers = lines[0].split(','); // Ignora o cabeçalho
             
-            const paroquiasData = {};
+            const newData = {};
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
-                // A primeira coluna é a paróquia, a segunda é a contagem
-                const paroquia = values[0].trim();
-                const count = parseInt(values[1], 10) || 0;
-                paroquiasData[paroquia] = count;
+                // Usa uma expressão regular para lidar com vírgulas dentro de aspas
+                const values = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (values.length >= 2) {
+                    const paroquia = values[0].replace(/"/g, '').trim();
+                    const count = parseInt(values[1].replace(/"/g, '').trim(), 10) || 0;
+                    newData[paroquia] = count;
+                }
             }
             
-            atualizarInterface(paroquiasData);
+            paroquiasData = newData; // Atualiza os dados globais
+            
+            atualizarInterface();
             esconderErro();
             
-            // ... resto do seu código
+            document.querySelector('.paroquias-container').classList.add('success-pulse');
+            setTimeout(() => {
+                document.querySelector('.paroquias-container').classList.remove('success-pulse');
+            }, 500);
             
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
             mostrarErro('Erro ao carregar dados. Tentando novamente...');
+            
+            if (Object.keys(paroquiasData).length === 0) {
+                 paroquiasData = {
+                    "Paróquia Senhora Sant'Ana – Varjota": 12,
+                    "Paróquia Nossa Senhora do Perpétuo Socorro – Reriutaba": 5,
+                    "Paróquia de Santa Quitéria – Santa Quitéria": 4,
+                    "Paróquia Nossa Senhora do Perpétuo Socorro – Pires Ferreira": 2
+                 };
+                atualizarInterface();
+            }
         }
     }
-    
-    // ... resto do seu código JavaScript
+
+    // Função para atualizar a interface (sem mudanças necessárias)
+    function atualizarInterface() {
+        const paroquias = Object.keys(paroquiasData);
+        const totalInscricoes = Object.values(paroquiasData).reduce((sum, count) => sum + count, 0);
+        const paroquiasComInscricoes = paroquias.filter(p => paroquiasData[p] > 0);
+        const totalParoquias = paroquiasComInscricoes.length;
+        const mediaParoquia = totalParoquias > 0 ? Math.round(totalInscricoes / totalParoquias * 10) / 10 : 0;
+
+        document.getElementById('total-inscricoes').textContent = totalInscricoes;
+        document.getElementById('total-paroquias').textContent = totalParoquias;
+        document.getElementById('media-paroquia').textContent = mediaParoquia;
+
+        const sortedParoquias = paroquias.sort((a, b) => paroquiasData[b] - paroquiasData[a]);
+
+        const paroquiasList = document.getElementById('paroquias-list');
+        paroquiasList.innerHTML = sortedParoquias
+            .filter(paroquia => paroquiasData[paroquia] > 0)
+            .map(paroquia => `
+                <div class="paroquia-item">
+                    <div class="paroquia-name">${paroquia}</div>
+                    <div class="paroquia-count">${paroquiasData[paroquia]}</div>
+                </div>
+            `).join('');
+
+        if (paroquiasList.innerHTML === '') {
+            paroquiasList.innerHTML = sortedParoquias.map(paroquia => `
+                <div class="paroquia-item">
+                    <div class="paroquia-name">${paroquia}</div>
+                    <div class="paroquia-count">${paroquiasData[paroquia]}</div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        
+        const now = new Date();
+        document.getElementById('last-update').textContent = now.toLocaleString('pt-BR');
+    }
+
+    // As funções mostrarErro, esconderErro, atualizarDados, verificarUltimaModificacao 
+    // e o bloco de inicialização
+    function mostrarErro(message) {
+        document.getElementById('error-message').innerHTML = `
+            <div class="error-message">
+                ❌ ${message}
+            </div>
+        `;
+    }
+
+    function esconderErro() {
+        document.getElementById('error-message').innerHTML = '';
+    }
+
+    async function atualizarDados() {
+        const button = document.querySelector('.manual-refresh');
+        const originalText = button.textContent;
+        
+        button.textContent = '🔄 Atualizando...';
+        button.style.opacity = '0.6';
+        button.disabled = true;
+        
+        await carregarDados();
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.opacity = '1';
+            button.disabled = false;
+        }, 1000);
+    }
+
+    function verificarUltimaModificacao() {
+        // ➡️ CORREÇÃO 4: A busca agora é por dados.csv
+        fetch('./dados.csv', { method: 'HEAD' })
+            .then(response => {
+                const lastModified = response.headers.get('last-modified');
+                if (lastModified) {
+                    const modifiedDate = new Date(lastModified);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now - modifiedDate) / (1000 * 60));
+                    
+                    if (diffMinutes < 15) {
+                        document.getElementById('next-update').innerHTML = 
+                            `✨ Dados atualizados há ${diffMinutes} minuto${diffMinutes !== 1 ? 's' : ''} pela automação`;
+                    }
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Bloco de Inicialização (já estava correto)
+    document.addEventListener('DOMContentLoaded', () => {
+        carregarDados();
+        verificarUltimaModificacao();
+        
+        updateInterval = setInterval(() => {
+            carregarDados();
+            verificarUltimaModificacao();
+        }, 120000); // 2 minutos
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (updateInterval) clearInterval(updateInterval);
+    });
+
+    window.addEventListener('focus', () => {
+        carregarDados();
+    });
 </script>
