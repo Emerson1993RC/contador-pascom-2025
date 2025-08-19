@@ -1,5 +1,10 @@
 {
-  "ultima_atualizacao": "19/08/2025, 18:51:36",
-  "total_inscricoes": 0,
-  "paroquias": {}
+  "ultima_atualizacao": "19/08/2025, 19:15:30",
+  "total_inscricoes": 31,
+  "fonte": "Aba Lista (Fórmulas SOMA)",
+  "paroquias": {
+    "Paróquia A": X,
+    "Paróquia B": Y,
+    "...": "..."
+  }
 }
