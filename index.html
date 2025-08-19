@@ -305,7 +305,7 @@
             try {
                 // Adiciona timestamp para evitar cache
                 const timestamp = new Date().getTime();
-                const response = await fetch(`./dados.json?t=${timestamp}`);
+                const response = await fetch(`./dadoos.json?t=${timestamp}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -462,3 +462,4 @@
     </script>
 </body>
 </html>
+
