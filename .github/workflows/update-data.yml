@@ -31,7 +31,7 @@ jobs:
         const SHEET_ID = process.env.SHEET_ID;
         const GID_LISTA = '169192893'; // GID específico da aba Lista
         // A URL foi alterada para a versão 'pub' que é mais confiável para scripts
-        const url = \`https://docs.google.com/spreadsheets/d/e/2PACX-1vT5PnxrK9Nbpm2NqSWNLIm2cjpwvV1nnnhO5RSnQc-wryEObKoy8TeOaDf1LW4KfwKAj8H8QVNLrGKJ/pub?gid=\${GID_LISTA}&single=true&output=csv\`;
+        const url = \`https://docs.google.com/spreadsheets/d/e/2PACX-1vT5PnxrK9Nbpm2NqSWNLIm2cjpwvV1nnnhO5RSnQc-wryEObKoy8TeOaDf1LW4KfwKAj8H8QVNLrGKJ/pub?gid=169192893&single=true&output=csv`;
 
         console.log('📊 Buscando dados da aba Lista...');
         console.log('🎯 GID da Lista:', GID_LISTA);
