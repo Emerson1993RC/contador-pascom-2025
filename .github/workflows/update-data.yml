@@ -1,35 +1,13 @@
-name: Atualizar Dados das Paróquias (Lista)
-
-on:
-  schedule:
-    - cron: '*/10 * * * *' # A cada 10 minutos
-  workflow_dispatch: # Permite execução manual
-
-jobs:
-  atualizacao-de-dados:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Repositório de checkout
-        uses: actions/checkout@v3
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Buscar dados da aba Lista
+- name: Buscar dados da aba Lista
         run: |
           npm install node-fetch@2
-
-          # Código JavaScript para buscar e processar os dados
+          
           node -e '
             const fs = require("fs");
             const fetch = require("node-fetch");
-            
-            // O URL da sua planilha publicada
+
             const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5PnxrK9Nbpm2NqSWNLIm2cjpwvV1nnnhO5RSnQc-wryEObKoy8TeOaDf1LW4KfwKAj8H8QVNLrGKJ/pub?gid=169192893&single=true&output=csv";
-            
+
             async function fetchData() {
               try {
                 console.log("Buscando dados da aba Lista...");
@@ -41,21 +19,40 @@ jobs:
                 
                 const csvData = await response.text();
                 
-                fs.writeFileSync("dados.csv", csvData);
+                // Processa o CSV para contar inscrições por paróquia
+                const lines = csvData.split("\n").filter(line => line.trim() !== "");
+                const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                const paroquiasCount = {};
+                
+                const paroquiaColumnIndex = headers.findIndex(header => header.includes("Qual sua paróquia/cidade"));
+                
+                if (paroquiaColumnIndex === -1) {
+                    throw new Error("Coluna de paróquia não encontrada no CSV.");
+                }
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (values[paroquiaColumnIndex]) {
+                        const paroquiaName = values[paroquiaColumnIndex].replace(/"/g, "").trim();
+                        if (paroquiaName) {
+                            paroquiasCount[paroquiaName] = (paroquiasCount[paroquiaName] || 0) + 1;
+                        }
+                    }
+                }
+                
+                // Converte a contagem de paróquias para o formato CSV
+                let outputCsv = "Paróquia,Inscrições\n";
+                for (const paroquia in paroquiasCount) {
+                    outputCsv += `${paroquia},${paroquiasCount[paroquia]}\n`;
+                }
+
+                fs.writeFileSync("dados.csv", outputCsv);
                 console.log("Dados salvos em dados.csv");
                 
               } catch (error) {
-                console.error("Erro ao buscar dados:", error);
+                console.error("Erro ao buscar ou processar dados:", error);
                 process.exit(1);
               }
             }
             fetchData();
           '
-
-      - name: Commit e push dos dados atualizados
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add dados.csv
-          git commit -m "Atualizar dados.csv" || true
-          git push
