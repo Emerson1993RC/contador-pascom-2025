@@ -1,16 +1,37 @@
-- name: Buscar dados da aba Lista
+name: Atualizar Dados das Paróquias (Lista)
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # A cada 10 minutos
+  workflow_dispatch: # Permite execução manual
+
+jobs:
+  atualizacao-de-dados:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Repositório de checkout
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Buscar e processar dados da planilha
         run: |
           npm install node-fetch@2
-          
+
           node -e '
             const fs = require("fs");
             const fetch = require("node-fetch");
 
+            // URL para o arquivo CSV da planilha publicada
             const spreadsheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT5PnxrK9Nbpm2NqSWNLIm2cjpwvV1nnnhO5RSnQc-wryEObKoy8TeOaDf1LW4KfwKAj8H8QVNLrGKJ/pub?gid=169192893&single=true&output=csv";
 
             async function fetchData() {
               try {
-                console.log("Buscando dados da aba Lista...");
+                console.log("Buscando e processando dados da planilha...");
                 const response = await fetch(spreadsheetUrl);
                 
                 if (!response.ok) {
@@ -21,6 +42,12 @@
                 
                 // Processa o CSV para contar inscrições por paróquia
                 const lines = csvData.split("\n").filter(line => line.trim() !== "");
+                if (lines.length <= 1) {
+                    console.log("Planilha vazia ou com apenas cabeçalho. Criando CSV vazio.");
+                    fs.writeFileSync("dados.csv", "Paróquia,Inscrições\n");
+                    return;
+                }
+
                 const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 const paroquiasCount = {};
                 
@@ -56,3 +83,11 @@
             }
             fetchData();
           '
+
+      - name: Commit e push dos dados atualizados
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add dados.csv
+          git commit -m "Atualizar dados.csv" || true
+          git push
