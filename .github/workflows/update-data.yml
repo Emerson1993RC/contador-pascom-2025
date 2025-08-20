@@ -23,10 +23,15 @@ jobs:
     - name: Buscar dados da aba Lista
       env:
         SHEET_ID: ${{ secrets.SHEET_ID }}
-      run: |
-        node -e "
-        const fs = require('fs');
-        const fetch = require('node-fetch');
+     run: |
+  npm install node-fetch@2
+  - name: Buscar dados da aba Lista
+    env:
+      SHEET_ID: ${{ secrets.SHEET_ID }}
+    run:
+      node -e '
+        const fs = require("fs");
+        const fetch = require("node-fetch");
 
         const SHEET_ID = process.env.SHEET_ID;
         const GID_LISTA = '169192893'; // GID específico da aba Lista
